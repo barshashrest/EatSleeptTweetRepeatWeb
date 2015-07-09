@@ -51,6 +51,36 @@ def main_page():
         	votecount.append([date_to_milli((year, month, day, 0, 0, 0, 0, 0, 0)), result[8]])	
         return render_template("moviecharts.html", vardate=vardate, numtweets=numtweets, moviestats=moviestats, moviename=moviename, voteaveragestats=voteaveragestats, votecount=votecount, graph =True)
 
+@app.route("/index/releasedate", methods =['GET', 'POST'])
+def show_releasedaycharts():
+  if request.method == 'GET':
+        return render_template('index_rd.html')
+
+  elif request.method == 'POST':
+        cassandra = CassandraCluster()
+        app.config['CASSANDRA_NODES'] = ['52.8.153.198']
+
+        releasedayGET= request.form["second"]
+        year = int(releasedayGET[0:4])
+        month = int(releasedayGET[5:7])
+        day = int(releasedayGET[8:10])
+        session = cassandra.connect()
+        session.set_keyspace("movietweets")
+        cql = "SELECT * FROM correlationtable7 WHERE year = %d AND month = %d AND day = %d ALLOW FILTERING" % (year, month, day)
+        movie_results = session.execute(cql)
+
+        def date_to_milli(time_tuple):
+                epoch_sec = time.mktime((1970, 1, 1, 0, 0, 0, 0, 0, 0))
+                return 1000*int(time.mktime(time_tuple) - epoch_sec)
+
+        releasedaystats = []
+        for result in movie_results:
+                movie = result[0].encode('ascii','ignore')
+                releasedaystats.append([movie, result[6]])
+
+
+        print releasedayGET
+        return render_template('releasedaycharts.html', releasedaystats= releasedaystats, releasedayGET = releasedayGET)
 
 @app.route("/index/slides")
 def show_slides():
